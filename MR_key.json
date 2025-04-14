@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "metarouter-426413",
+  "private_key_id": "72911355ed7ced00bd605fa8f7b8b538d36e8b97",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCLcVVsFPstKdWa\nXs2PlE7y38PztnkZOdvWW1d0++YvdQRP1Q0IazE720x8zlL6g7hOSanwDdz0hftV\n2Nw3s04PDTLbjLXaOoLd4nV5/zhhnC33lFbCvpOWsEaoiVve2Cv+3nFszNsHuan5\nI34btjVVMBhBc/osEqW1AzG+qXcts78w27beRl0bZ3J/64/NIk1L+9bdbeWCdrpE\nOBKKnKzUcz87oe+80VghTvF0bgLXHuEnwxBvp2r2NjjNVK5Lq6P4L6HlxjD8/g1Y\nqQdROpyj7Jvj+Q1xvnlSR/QBOO8D0JUkm8wKLyTZlaFJjxZ3q4V3mGX6GnA01ESl\nt5dqbP71AgMBAAECggEAF03Z1Z4dC0N8VhgFeTszRY5lkH+8td1QUv8BewTVR7Wi\nApiL3M4TVJpWKl6OCh2E6hqQCtU6SehxZHvBdBKkl0ngp8YYp0/TirMb6IdhnBiO\nqxuQs2vHvS2ZJXYNU00j7yysXp9O9LfQAxnuK8H0IFhRGXFBTGfSZ1HRGLj4OLwc\nLbsAQudiEdVHXc5Iv3hgRymUDaJMwnbOqXMVykZFXzrjFAUcJP1Ogj5i4NEpQ5bR\njPCG/dcOFpr7pHlDgvfl7W76aK/1WPApY0tzO+RV1v3YSWbmL+KCCPXqoFgghEGC\nbUSU1RlsKqibKyduiFzNqLYMTQTODsDW7enN06PIaQKBgQC/VzynWMx87CG3zaE6\nP+0yIdAWVf6NJrDTPAFADg7BNivByxZkVofldCFQlyzTp7u07cknGjtaMeAVKVGH\ndPc9p8mCfC5OL3vTVGJ8vt/ubmaS3Ehm14slXUORXiUtbMObjQ0xD/ssMzoCDGuy\nnc+9iXDMvn886dEnTboj8eHXaQKBgQC6kG4WmY5Z6CbI0VOMO6BiCXgr2n0qwFiW\n2bUhfbFAVAvGsXQmaGXAutefxc37bOFR8dVPjaUk86RbgOJ7diWFrctWfkObhGQ5\ntsAso4gnQbbU9G0eLy6dQwUtjnBJrswTQUxgEqa0KKmcSah159zkBMNqTExL98Pt\nTNjoTAJlrQKBgQCEaLIofGLF8AJFV59C2AokrxF443mL5EJpaxTSZuf+/KW7LfcI\n6HiSaJLFWlhC/8f9pK+Wx6ha+ji/bCBnRKHzoLDqA1Vn9aQS0kp1WQFN1khVSOsx\nf+diq++eITBJBwM2GZ4PXafLJof18vJ0YJDp8LqGdS1H0eZS9I7jYPeQQQKBgBYV\nrtKCDvXZo222SduZ21x/nngifxqmdlY1I1n5lRf2WwaETymUxibQd2H0enO+6dVX\neVbXf6smJFiooybWT47Jif6NJ9erDmo+lfUyzpVHFCuVW61tDGmVW3GPIP+373SA\nEFh3HMDK53kWxxheACoF3lQhAA8mH01iAXNOPCJpAoGAEiSasECMKsl63fGuk5du\n/hoIaon+bHe1cQNy3s1ixcNgBkA5W9sI2O6f3DCf17KpRCwGmpFExfIlDk8CSeEq\nU5gAjzFqQWf3Z46RfOzRSiEX+JyqVVp2SVtYauTJAi9mCFxR/G4fC0D00cp1VjLD\no/HfX9QfhjwTZv4arpiWt4I=\n-----END PRIVATE KEY-----\n",
+  "client_email": "metarouter-colgate-demo@metarouter-426413.iam.gserviceaccount.com",
+  "client_id": "115070625359441019181",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/metarouter-colgate-demo%40metarouter-426413.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
