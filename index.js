@@ -11,7 +11,7 @@ const util = require('util');
 
 //Configuration for MetaRouter routing
 const writeKey = "tuhogar_colpal";
-const const_batchSize = 10000; //Batch size for MetaRouter endpoint
+var   const_batchSize = 10000; //Batch size for MetaRouter endpoint
 const MR_Endpoint = "https://colgate-prod1-blue.gcp-uscentral1.mr-in.com/v1/batch"; //MetaRouter endpoint
 
 //FB Configuration Elements
@@ -62,6 +62,14 @@ var analyticsAdminClient = new analyticsAdmin.AnalyticsAdminServiceClient({
 //Utility Functions
 function replaceHyphenAndSpace(input) {
     return input.replace(/[- ]/g, "_");
+}
+
+function getPayloadSizeInKB(payload) {
+    // Convert the string to a Buffer to calculate its size in bytes
+    const sizeInBytes = Buffer.byteLength(payload, 'utf8');
+    // Convert bytes to kilobytes (1 KB = 1024 bytes)
+    const sizeInKB = sizeInBytes / 1024;
+    return sizeInKB.toFixed(2); // Return size rounded to 2 decimal places
 }
 
 //Read the GZip File
@@ -148,7 +156,7 @@ const makeHttpPostRequest = async (url, oPayload, authToken, sMethod) => {
         var response = await fetch(url, oRequest);
 
         if (!response.ok) {
-            console.log("Response Error - " + response.toString());
+            console.log("Response Error - " + JSON.stringify(response));
             return false;
         }
 
@@ -214,6 +222,7 @@ const findCSVFile = async (bucketId, fileName) => {
     }
 }
 
+var checkedSize = false;
 const createPayload = (csvFileContent_raw, segmentName) => {
     var aBatches = []; //Storing the chunked batch calls...
     var batchObject = {
@@ -221,7 +230,6 @@ const createPayload = (csvFileContent_raw, segmentName) => {
         "sentAt": new Date().toISOString(),
         "writeKey": writeKey
     };
-
     //Create a formatted payload to send to MetaRouter
     var jsonContent = parseCSV(csvFileContent_raw);
     var iCurrentBatchSize = 0;
@@ -267,6 +275,19 @@ const createPayload = (csvFileContent_raw, segmentName) => {
             iCurrentBatchSize++;
         } else {//Reached the maximum batch size. Reset the batch object and counter.
             iCurrentBatchSize = 0;
+
+            //Check the size of the batch to ensure it hasn't gotten over the limit.
+            if (checkedSize == false) {
+                var iPayloadSize = getPayloadSizeInKB(JSON.stringify(batchObject));
+                colDebug.log("Payload Size - " + iPayloadSize + " KB");
+                if (iPayloadSize >= 500) {
+                    const_batchSize = Math.floor((500 / (iPayloadSize / const_batchSize)));
+                    colDebug.log("Payload is too large. Shrinking default payload size to " + const_batchSize + " records");
+                    return createPayload(csvFileContent_raw, segmentName);
+                } else {
+                    checkedSize = true;
+                }
+            }
             aBatches.push(batchObject);
             batchObject = {
                 "batch": [],
@@ -276,6 +297,7 @@ const createPayload = (csvFileContent_raw, segmentName) => {
         }
     };
     aBatches.push(batchObject);
+    checkedSize = false;
     return aBatches;
 }
 
@@ -422,10 +444,16 @@ const checkAudience_google = async (audienceName) => {
 
 //Function to send the payload to MetaRouter
 const sendPayloadToMetaRouter = async (aBatchedPayload) => {
+    var shownPayload = false;
     try {
         aBatchedPayload.forEach(async (batchObject) => {
-            // Make the HTTPS POST request
-            await makeHttpPostRequest(MR_Endpoint, JSON.stringify(batchObject), "", "POST");
+            if(shownPayload == false) {
+                colDebug.log("MetaRouter Payload - " + JSON.stringify(batchObject));
+                shownPayload = true;
+                
+                // Make the HTTPS POST request
+                await makeHttpPostRequest(MR_Endpoint, JSON.stringify(batchObject), "", "POST");
+            }
         });
         return true;
     } catch (error) {
