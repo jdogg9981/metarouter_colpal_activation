@@ -21,7 +21,8 @@ const fb_pixelID = "1169011487499965"; //Facebook pixel ID
 const fb_trackedEventName = "add_to_audience";
 
 //Google Analytics 4 config
-const parent = "properties/366993005";
+//const parent = "properties/366993005";
+const parent = "properties/297395963";//Tuhogar Property URL
 
 //Test Variables
 const debug = true;
