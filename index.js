@@ -24,7 +24,7 @@ const fb_trackedEventName = "add_to_audience";
 const parent = "properties/366993005";
 
 //Test Variables
-const debug = false;
+const debug = true;
 const testAudName = "JW-TestAudience ABC";
 
 const audienceRule = {
@@ -64,6 +64,19 @@ function replaceHyphenAndSpace(input) {
     return input.replace(/[- ]/g, "_");
 }
 
+//Read the GZip File
+const decompress = async function (buffer) {
+    return new Promise((resolve, reject) => {
+        zlib.gunzip(buffer, (error, result) => {
+            if (error) {
+                reject(error);
+            } else {
+                resolve(result);
+            }
+        });
+    });
+}
+
 const colDebug = {
     "log": function (message) {
         if (debug == true) {
@@ -73,8 +86,10 @@ const colDebug = {
 }
 
 //Function to read the contents of the GCS file
-async function readFileFunction(cloudEvent) {
+async function readFileFunction(cloudEvent,bDecompress) {
     try {
+        colDebug.log("Cloud Event - " + JSON.stringify(cloudEvent));
+
         var message = cloudEvent;
         var storage = new Storage();
         var bucket = storage.bucket(message.message.attributes.bucketId);
@@ -82,10 +97,14 @@ async function readFileFunction(cloudEvent) {
 
         // Read the file contents
         const [fileContents] = await file.download();
+        var sFileContent = "";
 
-        colDebug.log("File contents - " + fileContents.toString());
-
-        return fileContents.toString();
+        if (bDecompress == true){
+            sFileContent = await decompress(fileContents);
+        }else{
+            sFileContent = fileContents;
+        }
+        return sFileContent.toString();
     } catch (error) {
         console.log("Error - " + JSON.stringify(error));
         return error;
@@ -97,8 +116,7 @@ async function readFileFunction(cloudEvent) {
 const makeHttpPostRequest = async (url, oPayload, authToken, sMethod) => {
     try {
         colDebug.log("Request Destination - " + url);
-        colDebug.log("Request Payload - " + oPayload);
-
+        
         var oHeader = {};
         var oRequest = {};
 
@@ -126,8 +144,6 @@ const makeHttpPostRequest = async (url, oPayload, authToken, sMethod) => {
                 headers: oHeader
             }
         }
-
-        colDebug.log("Request Object - " + JSON.stringify(oRequest));
 
         var response = await fetch(url, oRequest);
 
@@ -163,13 +179,11 @@ const parseCSV = (csvData) => {
         jsonData.push(obj);
     }
 
-    colDebug.log("Parsed CSV JSON - " + JSON.stringify(jsonData));
-
     return jsonData;
 }
 
 //Function to find the CSV file
-const findCSVFile = async (bucketId, segmentName) => {
+const findCSVFile = async (bucketId, fileName) => {
     try {
         const storage = new Storage();
         const [files] = await storage.bucket(bucketId).getFiles();
@@ -181,9 +195,10 @@ const findCSVFile = async (bucketId, segmentName) => {
             });
         }
 
-        // Filter files with "test" and ".csv" in the filename
+        // Find the associated filename...
+        var sCSVName = fileName.replace('_segment_metadata.json', '_00000.csv.gz');
         const matchingFiles = files.filter(file =>
-            file.name.includes(segmentName + "_Export_GCS_") && file.name.endsWith('.csv')
+            file.name.includes(sCSVName) && file.name.endsWith('.csv.gz')
         );
 
         if (matchingFiles.length > 0) {
@@ -214,7 +229,6 @@ const createPayload = (csvFileContent_raw, segmentName) => {
     for (var x = 0; x < jsonContent.length; x++) {
         var element = jsonContent[x];
         if (iCurrentBatchSize < const_batchSize) {
-            console.log("Current element - " + JSON.stringify(element));
             if (element["Id"] != undefined) {
                 //Critical payload elements
                 var formattedEvent = {};
@@ -250,9 +264,6 @@ const createPayload = (csvFileContent_raw, segmentName) => {
                 formattedEvent["properties"]["segmentName"] = segmentName;
                 batchObject.batch.push(formattedEvent);
             }
-
-            colDebug.log("Current batch - " + JSON.stringify(batchObject));
-
             iCurrentBatchSize++;
         } else {//Reached the maximum batch size. Reset the batch object and counter.
             iCurrentBatchSize = 0;
@@ -265,9 +276,6 @@ const createPayload = (csvFileContent_raw, segmentName) => {
         }
     };
     aBatches.push(batchObject);
-
-    colDebug.log("Final batch - " + JSON.stringify(aBatches));
-
     return aBatches;
 }
 
@@ -415,9 +423,6 @@ const checkAudience_google = async (audienceName) => {
 //Function to send the payload to MetaRouter
 const sendPayloadToMetaRouter = async (aBatchedPayload) => {
     try {
-
-        colDebug.log("String of batched payload - " + JSON.stringify(aBatchedPayload));
-
         aBatchedPayload.forEach(async (batchObject) => {
             // Make the HTTPS POST request
             await makeHttpPostRequest(MR_Endpoint, JSON.stringify(batchObject), "", "POST");
@@ -434,26 +439,32 @@ const sendPayloadToMetaRouter = async (aBatchedPayload) => {
 functions.cloudEvent('receiveFiles', async function (cloudEvent) {
     //Check if the right file to read
     if (cloudEvent.message.attributes.objectId.indexOf("metadata.json") == -1) {
-        return false;
+        return {
+            status: 'success',
+            message: "File uploaded was not metadata.json - " + cloudEvent.message.attributes.objectId
+        };
     }
 
     //Read the file contents
-    var response = await readFileFunction(cloudEvent);
+    var response = await readFileFunction(cloudEvent,false);
 
     //Check that there are updated records in the set
     var fileDetails = JSON.parse(response);
     var iRecordSet = fileDetails.activatedRecordCount;
 
     if (iRecordSet == 0) {
-        console.log("No records to process");
-        return false;
+        colDebug.log("No records to process");
+        return {
+            status: 'success',
+            message: "No records to process"
+        };
     }
 
     //Store the name of the segment
-    var segmentName = fileDetails.name;
+    var sAudienceName = replaceHyphenAndSpace(fileDetails.name);//Google does not like event names and audience names to have hyphens
 
     //Search for the .csv file
-    var csvObjectId = await findCSVFile(cloudEvent.message.attributes.bucketId, fileDetails.name);
+    var csvObjectId = await findCSVFile(cloudEvent.message.attributes.bucketId, cloudEvent.message.attributes.objectId);
 
     if (csvObjectId == false) {
         console.log("No .csv file for that segment found...");
@@ -473,10 +484,10 @@ functions.cloudEvent('receiveFiles', async function (cloudEvent) {
         }
     };
 
-    var csvFileContent_raw = await readFileFunction(CSVDetails);
+    var csvFileContent_raw = await readFileFunction(CSVDetails,true);
 
     //Check if the audience exists in FB
-    var audienceExists_fb = await checkAudience_fb(segmentName);
+    var audienceExists_fb = await checkAudience_fb(sAudienceName);
     if (audienceExists_fb == "error") {
         console.log("Error checking audience");
         return {
@@ -486,7 +497,6 @@ functions.cloudEvent('receiveFiles', async function (cloudEvent) {
     }
 
     //Check if the audience exists in Google
-    var sAudienceName = replaceHyphenAndSpace(testAudName);//Google does not like event names and audience names to have hyphens
     var audienceExists_google = await checkAudience_google(sAudienceName);
 
     if (audienceExists_google == "error") {
@@ -499,7 +509,7 @@ functions.cloudEvent('receiveFiles', async function (cloudEvent) {
 
     if (audienceExists_fb == false) {
         console.log("Audience does not exist. Creating audience...");
-        var audienceResponse = await createAudience_fb(segmentName);
+        var audienceResponse = await createAudience_fb(sAudienceName);
         if (audienceResponse == false) {
             console.log("Error creating audience");
             return {
@@ -513,7 +523,7 @@ functions.cloudEvent('receiveFiles', async function (cloudEvent) {
 
     if (audienceExists_google == false) {
         console.log("Audience does not exist. Creating audience...");
-        var audienceResponse = await createAudience_google(segmentName);
+        var audienceResponse = await createAudience_google(sAudienceName);
         if (audienceResponse == false) {
             console.log("Error creating audience");
             return {
@@ -524,7 +534,7 @@ functions.cloudEvent('receiveFiles', async function (cloudEvent) {
     }
 
     //Create Payload
-    var oPayload = createPayload(csvFileContent_raw, segmentName);
+    var oPayload = createPayload(csvFileContent_raw, sAudienceName);
 
     //Send Payload to MetaRouter
     try {
