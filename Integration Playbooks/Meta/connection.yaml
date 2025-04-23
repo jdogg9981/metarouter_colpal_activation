@@ -1,0 +1,26 @@
+params:
+  - name: API_VERSION
+    isOptional: false
+    defaultValue: v22.0
+  - name: PIXEL_ID
+    isOptional: false
+    defaultValue: '693680031615164'
+    exampleValue: my-pixel-id
+  - name: ACCESS_TOKEN
+    isOptional: false
+    defaultValue: >-
+      EAALHKu9r7jQBO7qrZCXBYkXdD0DVSzDCk9XB4xQhVSzc3n6Ebkganay6Uw9rOaPVjOyxklf3tDt1GviZCdIgPQ6m3HqxIJlVIhh2mJ0mD2d5IEiZB2dWGShWkFDsLgRFL9vCSiZCXfkUqRQxSEhSpnyzMZBitQoV6aqkXcBa0DyMp6q7tFF0qLtVpFA2sCZAsgAQZDZD
+    exampleValue: my-access-token
+default:
+  method: POST
+  headers:
+    - key: Accept-Encoding
+      value: application/json
+  endpoint: >-
+    https://graph.facebook.com/$$API_VERSION$$/$$PIXEL_ID$$/events?access_token=$$ACCESS_TOKEN$$
+  batchSize: 10
+  transform:
+    body: |-
+      request.body = { data = batch }
+      return request
+    lang: lua

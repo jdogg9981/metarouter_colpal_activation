@@ -243,7 +243,7 @@ const createPayload = (csvFileContent_raw, segmentName) => {
                 var formattedEvent = {};
                 formattedEvent["integrations"] = {};
                 formattedEvent["event"] = fb_trackedEventName;
-                formattedEvent["anonymousId"] = element["Id"];
+                formattedEvent["anonymousId"] = element["Individual-Id"];
                 formattedEvent["type"] = "track";
                 formattedEvent["context"] = {};
                 formattedEvent["context"]["consent"] = {
@@ -259,7 +259,8 @@ const createPayload = (csvFileContent_raw, segmentName) => {
                     },
                     "googleTag": {
                         "data": {
-                            "ga": element["ga"]
+                            "ga": element["ga"],
+                            "ga_session": element["ga_session"]
                         }
                     },
                     "theTradeDesk": {
@@ -268,6 +269,14 @@ const createPayload = (csvFileContent_raw, segmentName) => {
                 };
 
                 formattedEvent["context"]["userAgent"] = element["User_Agent"];
+
+                //Add some user details to the mix
+                formattedEvent["context"]["traits"] = {
+                    "email": element["Email"],
+                    "firstName": element["FirstName"],
+                    "lastName": element["LastName"],
+                    "phone": element["Phone"]
+                };
 
                 formattedEvent["properties"] = {};
                 formattedEvent["properties"]["segmentName"] = segmentName;

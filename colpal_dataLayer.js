@@ -1,5 +1,4 @@
 //console.log("[MR] - Begin MR cookie inspection...");
-
 var event_SFDC = new CustomEvent("_mr_datalayerupdate");
 var _mrTester = {};
 
@@ -49,7 +48,7 @@ var _mr_count_timeout = setTimeout(function () {
 
 var _mr_completed = false;
 
-const _mr_count_interval = setInterval(() => {
+var _mr_count_interval = setInterval(function(){
     //console.log("[MR] - Interval Check");
     var cookieVal = window._mrFunctions.getCookie("_mr_syncInitialized");
     //console.log("[MR] - Cookie Value: " + cookieVal);

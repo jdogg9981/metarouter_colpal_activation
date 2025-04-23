@@ -1,0 +1,46 @@
+global:
+  mappings:
+    - inputKey: input
+      outputKey: user_data.em
+      transforms:
+        - expression:
+            body: return TO_SHA256_HASH(LOWER(TRIM(input.context.traits.email)))
+            lang: lua
+    - inputKey: messageId
+      outputKey: event_id
+    - inputKey: context.ip
+      outputKey: user_data.client_ip_address
+    - inputKey: context.userAgent
+      outputKey: user_data.client_user_agent
+    - inputKey: anonymousId
+      outputKey: user_data.external_id
+      transforms:
+        - toHash: sha256
+    - inputKey: context.providers.facebookTag._fbc
+      outputKey: user_data.fbc
+    - inputKey: context.providers.facebookTag._fbp
+      outputKey: user_data.fbp
+  spreadings: []
+  enrichments:
+    - outputKey: action_source
+      staticString: website
+    - outputKey: event_time
+      timestamp: seconds
+    - outputKey: event_source_url
+      staticString: https://www.tuhogar.com/es-mx
+    - outputKey: app_data.advertiser_tracking_enabled
+      staticBool: true
+    - outputKey: app_data.application_tracking_enabled
+      staticBool: true
+    - outputKey: event_source_url
+      staticString: https://www.tuhogar.com/es-mx
+  expressions: []
+params: []
+default:
+  filters: []
+  mappings: []
+  spreadings: []
+  enrichments: []
+  expressions: []
+version: 1.5.0
+eventSpecific: []
