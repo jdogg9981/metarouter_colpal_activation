@@ -1,0 +1,38 @@
+params: []
+default:
+  method: GET
+  headers:
+    - key: Accept-Encoding
+      value: application/json
+    - key: Referer
+      fromEventKey: context.page.referrer
+    - key: User-Agent
+      fromEventKey: context.userAgent
+  endpoint: https://google-analytics.com/g/collect
+  transform:
+    body: >-
+      -- Debug Mode
+
+      request.url = REPLACE(request.url, "&isDebugMode=false", "")
+
+      request.url = REPLACE(request.url, "isDebugMode=true",
+      "ep.debug_mode=true")
+
+
+      -- Conversion
+
+      request.url = REPLACE(request.url, "&isConversion=false", "")
+
+      request.url = REPLACE(request.url, "isConversion=true",
+      "ep.firebase_conversion=1")
+
+
+      -- Transaction
+
+      request.url = REPLACE(request.url, "ep-", "ep.")
+
+      request.url = REPLACE(request.url, "epn-", "epn.")
+
+
+      return request
+    lang: lua

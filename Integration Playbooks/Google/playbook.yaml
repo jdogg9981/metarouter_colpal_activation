@@ -1,0 +1,102 @@
+global:
+  mappings:
+    - inputKey: input
+      outputKey: gclid
+      transforms:
+        - expression:
+            body: >-
+              if input.context.providers.googleGtag.data.gclid then return
+              SPLIT(input.context.providers.googleGtag.data.gclid, ".", 3)[3]
+              end
+            lang: lua
+    - inputKey: input
+      outputKey: dclid
+      transforms:
+        - expression:
+            body: >-
+              if input.context.providers.googleGtag.data.dclid then return
+              SPLIT(input.context.providers.googleGtag.data.dclid, ".", 3)[3]
+              end
+            lang: lua
+    - inputKey: context.userAgent
+      outputKey: ua
+    - inputKey: context.ip
+      outputKey: _uip
+    - inputKey: properties.engagement_time_milliseconds
+      outputKey: _et
+      defaultString: '1'
+    - inputKey: input
+      outputKey: sid
+      transforms:
+        - expression:
+            body: |-
+              local ga = SPLIT(ga_session, ".", 4)
+              if ga and ga[3] then 
+                return ga[3] 
+              end
+            lang: lua
+    - inputKey: input
+      outputKey: sct
+      transforms:
+        - expression:
+            body: |-
+              local ga_sess = SPLIT(ga_session, ".",5)
+                if ga_sess and ga_sess[4] then 
+                  return ga_sess[4]
+                end
+            lang: lua
+    - inputKey: input
+      outputKey: cid
+      transforms:
+        - expression:
+            body: |-
+              local ga = SPLIT(ga, ".", 4) 
+              if ga and ga[4] then 
+                return ga[3] .. "." .. ga[4] 
+              end  
+              return input.anonymousId
+            lang: lua
+  spreadings: []
+  enrichments:
+    - outputKey: dl
+      staticString: https://www.tuhogar.com/es-mx
+    - outputKey: dt
+      staticString: 'Bienvenidos a Tu Hogar México'
+    - outputKey: tid
+      staticString: $$MEASUREMENT_ID$$
+    - outputKey: v
+      staticString: '2'
+    - outputKey: isDebugMode
+      staticBool: false
+  expressions:
+    - body: >-
+        local up = {}
+
+        up.metarouter_anonymousid = input.anonymousId
+
+
+        local output = {} for key, value in pairs(up) do    output["up." .. key]
+        = value
+
+        end
+
+        return output
+      lang: lua
+params:
+  - name: MEASUREMENT_ID
+    isOptional: false
+    defaultValue: G-TZJTZ24Z5E
+    exampleValue: my-measurement-id
+default:
+  mappings:
+    - inputKey: input
+      outputKey: en
+      transforms:
+        - expression:
+            body: return input.event or input.type
+            lang: lua
+  spreadings: []
+  enrichments: []
+  expressions: []
+version: 0.4.0
+eventSpecific: []
