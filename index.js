@@ -15,16 +15,21 @@ var   const_batchSize = 10000; //Batch size for MetaRouter endpoint
 const MR_Endpoint = "https://colgate-prod1-blue.gcp-uscentral1.mr-in.com/v1/batch"; //MetaRouter endpoint
 
 //FB Configuration Elements
+// Debug values
 const FB_AccessToken = "EAAV96AA1uAsBO70KItdnWCiasXw69NmEnMEhZBhBx3KZAapdaZBqj7iTZCbsrA4ZCcFXz6mjCyn9hMZBO0HY2jiNqgHkj8DaVWrA5zpy46IUUkGisxBtSiZBrZBXcczGiSswmbvUgG0WNveJvGAPZAFJFodvyAoZArfNvdpZBU8a6ILZBONmZAToqCPQISQ1x";
-const fb_accountID = "186259606766605"; //Facebook account ID
-const fb_pixelID = "1169011487499965"; //Facebook pixel ID
-const fb_trackedEventName = "add_to_audience";
+// const fb_accountID = "186259606766605"; //Facebook account ID
+// const fb_pixelID = "1169011487499965"; //Facebook pixel ID
+
+const fb_accountID           = "186259606766605"; //Facebook account ID
+const fb_pixelID            = "693680031615164"; //Facebook pixel ID
+const fb_trackedEventName   = "add_to_audience";
 
 //Google Analytics 4 config
-//const parent = "properties/366993005";
+//const parent = "properties/366993005";//JW Property URL for testing
 const parent = "properties/297395963";//Tuhogar Property URL
 
 //Test Variables
+const skipAudienceCreate = true;
 const debug = true;
 const testAudName = "JW-TestAudience ABC";
 
@@ -174,17 +179,22 @@ const makeHttpPostRequest = async (url, oPayload, authToken, sMethod) => {
 
 //Function to parse the CSV file contents
 const parseCSV = (csvData) => {
-    const lines = csvData.split('\n');
-    const headers = lines[0].split(',');
+    const lines         = csvData.split('\n');
+    const headers       = lines[0].split(',');
+    var   columnLimit   = headers.length - 1;
     const jsonData = [];
 
     for (let i = 1; i < lines.length; i++) {
-        const obj = {};
-        const currentline = lines[i].split(',');
+        var obj = {};
+        var currentline     = lines[i].split(',', columnLimit);
+        var sUserAgent      = lines[i].split(currentline.join(','))[1];
 
-        for (let j = 0; j < headers.length; j++) {
+        for (let j = 0; j < columnLimit; j++) {
             obj[headers[j]] = currentline[j];
         }
+
+        obj[headers[columnLimit]] = sUserAgent;
+
         jsonData.push(obj);
     }
 
@@ -235,80 +245,91 @@ const createPayload = (csvFileContent_raw, segmentName) => {
     var jsonContent = parseCSV(csvFileContent_raw);
     var iCurrentBatchSize = 0;
 
-    for (var x = 0; x < jsonContent.length; x++) {
-        var element = jsonContent[x];
-        if (iCurrentBatchSize < const_batchSize) {
-            if (element["Id"] != undefined) {
-                //Critical payload elements
-                var formattedEvent = {};
-                formattedEvent["integrations"] = {};
-                formattedEvent["event"] = fb_trackedEventName;
-                formattedEvent["anonymousId"] = element["Individual-Id"];
-                formattedEvent["type"] = "track";
-                formattedEvent["context"] = {};
-                formattedEvent["context"]["consent"] = {
-                    "explicit": true,
-                    "optOut": {
-                        "0000": false
-                    }
-                };
-                formattedEvent["context"]["providers"] = {
-                    "facebookTag": {
-                        "_fbp": element["fbp"],
-                        "_fpc": element["fpc"]
-                    },
-                    "googleTag": {
-                        "data": {
-                            "ga": element["ga"],
-                            "ga_session": element["ga_session"]
+    try{
+        for (var x = 0; x < jsonContent.length; x++) {
+            var element = jsonContent[x];
+            if (iCurrentBatchSize < const_batchSize) {
+                if (element["Id"] != undefined) {
+                    //Critical payload elements
+                    var formattedEvent = {};
+                    formattedEvent["integrations"] = {};
+                    formattedEvent["event"] = fb_trackedEventName;
+                    formattedEvent["anonymousId"] = element["Id"];
+                    formattedEvent["type"] = "track";
+                    formattedEvent["context"] = {};
+                    formattedEvent["context"]["consent"] = {
+                        "explicit": true,
+                        "optOut": {
+                            "0000": false
                         }
-                    },
-                    "theTradeDesk": {
-                        "ttd_id": element["ttd_id"]
+                    };
+                    formattedEvent["context"]["providers"] = {
+                        "facebookTag": {
+                            "_fbp": element["fbp"],
+                            "_fpc": element["fpc"]
+                        },
+                        "googleTag": {
+                            "data": {
+                                "ga": element["ga"],
+                                "ga_session": element["ga_session"]
+                            }
+                        },
+                        "theTradeDesk": {
+                            "ttd_id": element["ttd_id"]
+                        }
+                    };
+
+                    if (element["WebsiteEngagement"].substring(1) != "") {
+                        colDebug.log("User Agent - " + JSON.parse(element["WebsiteEngagement"].substring(1)));
+                        formattedEvent["context"]["userAgent"] = JSON.stringify(JSON.parse(element["WebsiteEngagement"].substring(1)).User_Agent);
+                    } else {
+                        colDebug.log("WebsiteEngagement does not start with a comma. Skipping JSON parsing.");
+                        formattedEvent["context"]["userAgent"] = "";
                     }
-                };
 
-                formattedEvent["context"]["userAgent"] = element["User_Agent"];
+                    //Add some user details to the mix
+                    formattedEvent["context"]["traits"] = {
+                        "email": element["EmailAddress"],
+                        "firstName": element["FirstName"],
+                        "lastName": element["LastName"],
+                        "phone": element["FormattedE164PhoneNumber"]
+                    };
 
-                //Add some user details to the mix
-                formattedEvent["context"]["traits"] = {
-                    "email": element["Email"],
-                    "firstName": element["FirstName"],
-                    "lastName": element["LastName"],
-                    "phone": element["Phone"]
-                };
-
-                formattedEvent["properties"] = {};
-                formattedEvent["properties"]["segmentName"] = segmentName;
-                batchObject.batch.push(formattedEvent);
-            }
-            iCurrentBatchSize++;
-        } else {//Reached the maximum batch size. Reset the batch object and counter.
-            iCurrentBatchSize = 0;
-
-            //Check the size of the batch to ensure it hasn't gotten over the limit.
-            if (checkedSize == false) {
-                var iPayloadSize = getPayloadSizeInKB(JSON.stringify(batchObject));
-                colDebug.log("Payload Size - " + iPayloadSize + " KB");
-                if (iPayloadSize >= 500) {
-                    const_batchSize = Math.floor((500 / (iPayloadSize / const_batchSize)));
-                    colDebug.log("Payload is too large. Shrinking default payload size to " + const_batchSize + " records");
-                    return createPayload(csvFileContent_raw, segmentName);
-                } else {
-                    checkedSize = true;
+                    formattedEvent["properties"] = {};
+                    formattedEvent["properties"]["segmentName"] = segmentName;
+                    batchObject.batch.push(formattedEvent);
                 }
+                iCurrentBatchSize++;
+            } else {//Reached the maximum batch size. Reset the batch object and counter.
+                iCurrentBatchSize = 0;
+
+                //Check the size of the batch to ensure it hasn't gotten over the limit.
+                if (checkedSize == false) {
+                    var iPayloadSize = getPayloadSizeInKB(JSON.stringify(batchObject));
+                    colDebug.log("Payload Size - " + iPayloadSize + " KB");
+                    if (iPayloadSize >= 500) {
+                        const_batchSize = Math.floor((500 / (iPayloadSize / const_batchSize)));
+                        colDebug.log("Payload is too large. Shrinking default payload size to " + const_batchSize + " records");
+                        return createPayload(csvFileContent_raw, segmentName);
+                    } else {
+                        checkedSize = true;
+                    }
+                }
+                aBatches.push(batchObject);
+                batchObject = {
+                    "batch": [],
+                    "sentAt": new Date().toISOString(),
+                    "writeKey": writeKey
+                };
             }
-            aBatches.push(batchObject);
-            batchObject = {
-                "batch": [],
-                "sentAt": new Date().toISOString(),
-                "writeKey": writeKey
-            };
-        }
-    };
-    aBatches.push(batchObject);
-    checkedSize = false;
-    return aBatches;
+        };
+        aBatches.push(batchObject);
+        checkedSize = false;
+        return aBatches;
+    }catch(error){
+        colDebug.log("Error - " + error.toString());
+        return false;
+    }
 }
 
 //Facebook Audience Creation
@@ -524,55 +545,65 @@ functions.cloudEvent('receiveFiles', async function (cloudEvent) {
 
     var csvFileContent_raw = await readFileFunction(CSVDetails,true);
 
-    //Check if the audience exists in FB
-    var audienceExists_fb = await checkAudience_fb(sAudienceName);
-    if (audienceExists_fb == "error") {
-        console.log("Error checking audience");
-        return {
-            status: 'success',
-            message: "Error checking audience in facebook."
-        };
-    }
-
-    //Check if the audience exists in Google
-    var audienceExists_google = await checkAudience_google(sAudienceName);
-
-    if (audienceExists_google == "error") {
-        console.log("Error checking audience");
-        return {
-            status: 'success',
-            message: "Error checking audience in google."
-        };
-    }
-
-    if (audienceExists_fb == false) {
-        console.log("Audience does not exist. Creating audience...");
-        var audienceResponse = await createAudience_fb(sAudienceName);
-        if (audienceResponse == false) {
-            console.log("Error creating audience");
+    if (skipAudienceCreate == false) {
+        //Check if the audience exists in FB
+        var audienceExists_fb = await checkAudience_fb(sAudienceName);
+        if (audienceExists_fb == "error") {
+            console.log("Error checking audience");
             return {
                 status: 'success',
-                message: "Error creating audience"
+                message: "Error checking audience in facebook."
             };
         }
-    } else {
-        console.log("Audience already exists");
-    }
 
-    if (audienceExists_google == false) {
-        console.log("Audience does not exist. Creating audience...");
-        var audienceResponse = await createAudience_google(sAudienceName);
-        if (audienceResponse == false) {
-            console.log("Error creating audience");
+        //Check if the audience exists in Google
+        var audienceExists_google = await checkAudience_google(sAudienceName);
+
+        if (audienceExists_google == "error") {
+            console.log("Error checking audience");
             return {
                 status: 'success',
-                message: "Error creating audience"
+                message: "Error checking audience in google."
             };
+        }
+
+        if (audienceExists_fb == false) {
+            console.log("Audience does not exist. Creating audience...");
+            var audienceResponse = await createAudience_fb(sAudienceName);
+            if (audienceResponse == false) {
+                console.log("Error creating audience");
+                return {
+                    status: 'success',
+                    message: "Error creating audience"
+                };
+            }
+        } else {
+            console.log("Audience already exists");
+        }
+
+        if (audienceExists_google == false) {
+            console.log("Audience does not exist. Creating audience...");
+            var audienceResponse = await createAudience_google(sAudienceName);
+            if (audienceResponse == false) {
+                console.log("Error creating audience");
+                return {
+                    status: 'success',
+                    message: "Error creating audience"
+                };
+            }
         }
     }
 
     //Create Payload
     var oPayload = createPayload(csvFileContent_raw, sAudienceName);
+
+    if(oPayload == false) {
+        console.log("Error creating payload");
+        return {
+            status: 'success',
+            message: "Error creating payload"
+        };
+    }
 
     //Send Payload to MetaRouter
     try {

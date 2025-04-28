@@ -59,7 +59,7 @@ global:
   spreadings: []
   enrichments:
     - outputKey: dl
-      staticString: https://www.tuhogar.com/es-mx
+      staticString: 'https://www.tuhogar.com/es-mx'
     - outputKey: dt
       staticString: 'Bienvenidos a Tu Hogar México'
     - outputKey: tid
@@ -88,15 +88,16 @@ params:
     defaultValue: G-TZJTZ24Z5E
     exampleValue: my-measurement-id
 default:
+  filters: []
   mappings:
     - inputKey: input
       outputKey: en
       transforms:
         - expression:
-            body: return input.event or input.type
+            body: return input.properties.segmentName
             lang: lua
   spreadings: []
   enrichments: []
   expressions: []
 version: 0.4.0
-eventSpecific: []
+eventSpecific: {}

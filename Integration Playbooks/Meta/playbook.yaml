@@ -20,6 +20,8 @@ global:
       outputKey: user_data.fbc
     - inputKey: context.providers.facebookTag._fbp
       outputKey: user_data.fbp
+    - inputKey: event
+      outputKey: event_name
   spreadings: []
   enrichments:
     - outputKey: action_source
@@ -43,4 +45,4 @@ default:
   enrichments: []
   expressions: []
 version: 1.5.0
-eventSpecific: []
+eventSpecific: {}
